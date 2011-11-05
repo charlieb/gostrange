@@ -1,0 +1,7 @@
+Strange Attractors animated.
+
+Can produce some quite beautiful animations.
+
+Finds quadratic attractors in 2-space and animates them.
+Hit Esc to find a new attractor.
+Program must be killed to quit (bug)
