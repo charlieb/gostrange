@@ -88,9 +88,10 @@ func lyapunov_exponent2d(fn F2D, startx, starty float64) float64 {
 }
 
 var (
-	rot float64 = 45.0
-	xoff float64 = 0.0
-	yoff float64 = 0.0
+	//rot float64 = 45.0
+	xoff, yoff,	zoff float64 = 0,0,0
+	scale float64 = 0.5
+	draw_reticule bool = true
 )
 
 func plot_vertices(fn func()) {
@@ -99,26 +100,25 @@ func plot_vertices(fn func()) {
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
 	gl.PointSize(1.0)
-	gl.Color4d(1,1,1, 1.0)
 	gl.LoadIdentity()
 /*
 	gl.Rotated(rot, 1.0, 0.0, 1.0)
   gl.Rotated(rot, 1.0, 0.0, 1.0)
 */
 	//rot += 0.2
-	var s float64 = 0.5
-	//gl.Translated(-1, -0.5, 0)
-  gl.Scaled(s,s,s)
+	gl.Translated(xoff, yoff, zoff)
+  gl.Scaled(scale, scale, scale)
 	gl.Begin(gl.POINTS)
+	
+	if draw_reticule {
+		gl.Color4d(1,0,0, 1.0)
+		gl.Vertex2d(0.1,0.1)
+		gl.Vertex2d(0.1,-0.1)
+		gl.Vertex2d(-0.1,-0.1)
+		gl.Vertex2d(-0.1,0.1)
+	}
 
-
-	gl.Color4d(1,0,0, 1.0)
-	gl.Vertex2d(0.1,0.1)
-	gl.Vertex2d(0.1,-0.1)
-	gl.Vertex2d(-0.1,-0.1)
-	gl.Vertex2d(-0.1,0.1)
-
-	gl.Color4d(1,1,1, 0.0125)
+	gl.Color4d(1,1,1, 0.25)
 
 	fn()
 
@@ -265,18 +265,21 @@ func testPlot() {
 		split int64 = start
 		total int64
 
+		new_attractor bool = true
+
 		coeffs *Coeffs2DQuad
 		offsets, offset_coeffs Coeffs2DQuad
 		startx, starty float64
 	)
-	//fmt.Println("Henon L:", lyapunov_exponent2d(make_henon_fn(), 0.6, 0.2))
-	//return
-
-	coeffs, startx, starty = find_quadric_map_with_L(0.01, 0.4)
 
 	for i := range offsets { offsets[i] += rand.Float64() }
 
-	for handleEvents() {
+	for handleEvents(&new_attractor) {
+
+		if new_attractor { 
+			coeffs, startx, starty = find_quadric_map_with_L(0.01, 0.2) 
+			new_attractor = false
+		}
 	
 		//iterate_plot1d(itfn1d, 500, 100, 2, 4, 0.001)
 		//plot2d(itfn2d, 500, 100, 2, 4, 0.001)
@@ -331,16 +334,42 @@ func initScreen() {
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 }
 
-func handleEvents() bool {
-
+// sdl.GetModState() doesn't work properly so we store state here :(
+var (
+	mod = sdl.KMOD_NONE
+)
+func handleEvents(new_attractor *bool) bool {
 	for ev := sdl.PollEvent(); ev != nil; ev = sdl.PollEvent() {
 		switch e := ev.(type) {
 		case *sdl.QuitEvent:
 			return false
 		case *sdl.KeyboardEvent:
-			if e.Type == sdl.KEYDOWN {
-				if e.Keysym.Sym == 27 {
-					return false
+			//fmt.Println(e.Keysym.Sym, ": ", sdl.GetKeyName(sdl.Key(e.Keysym.Sym)))
+			switch e.Type {
+			case sdl.KEYUP:
+				switch sdl.Key(e.Keysym.Sym) {
+				case sdl.K_LCTRL: mod = sdl.KMOD_NONE
+				}
+			case sdl.KEYDOWN:
+				switch mod {
+				case sdl.KMOD_NONE:
+					switch sdl.Key(e.Keysym.Sym) {
+					case sdl.K_LCTRL:  mod = sdl.KMOD_LCTRL
+					case sdl.K_ESCAPE: return false
+					case sdl.K_UP:        yoff += 0.05
+					case sdl.K_DOWN:      yoff -= 0.05
+					case sdl.K_LEFT:      xoff -= 0.05
+					case sdl.K_RIGHT:     xoff += 0.05
+					case sdl.K_n:         *new_attractor = true
+					default:
+					}
+				case sdl.KMOD_LCTRL:
+					fmt.Println("CTRL")
+					switch sdl.Key(e.Keysym.Sym) {
+					case sdl.K_LEFT:  scale -= 0.05
+					case sdl.K_RIGHT: scale += 0.05
+					default:
+					}
 				}
 			}
 		default:
@@ -357,6 +386,6 @@ func main() {
 
 	initScreen()
 	//testCircleIntersect()
-	for { testPlot() }
+	testPlot()
 
 }
