@@ -113,6 +113,24 @@ func plot_vertices(fn func()) {
   //rot += 0.2
   gl.Translated(xoff, yoff, zoff)
   gl.Scaled(scale, scale, scale)
+
+}
+
+func make_2D_plot_fn(fn F2D, startx, starty float64, disguard, plot int) func() {
+	return func() {
+    var (
+      x, y float64 = startx, starty
+      i int
+    )
+    for i = 0; i < disguard; i++ { x, y = fn(x, y) }
+    for i = 0; i < plot; i++ {
+      x, y = fn(x, y)
+      gl.Vertex2d(x, y)
+    }
+  }
+}
+
+func generate_list(fn func()) {
   gl.Begin(gl.POINTS)
   
   if draw_reticule {
@@ -122,90 +140,30 @@ func plot_vertices(fn func()) {
     gl.Vertex2d(-0.1,-0.1)
     gl.Vertex2d(-0.1,0.1)
   }
-
+	
   gl.Color4d(1,1,1, 0.25)
-
+	
   fn()
-
+	
   gl.End()
-
 }
 
-func iterate_plot2d(fn F2D, startx, starty float64, disguard, plot int) {
-  var (
-    plot_fn = func() {
-      var (
-        x, y float64 = startx, starty
-        i int
-      )
-      
-      for i = 0; i < disguard; i++ { x, y = fn(x, y) }
-      for i = 0; i < plot; i++ {
-        x, y = fn(x, y)
-        gl.Vertex2d(x, y)
-      }
-    }
-  )
-  plot_vertices(plot_fn)
-}
+func plot_list(list uint) {
+  gl.Enable(gl.BLEND)
+  gl.Enable(gl.POINT_SMOOTH)
+  gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
-
-func plot2d(fn func(float64, float64, float64) (float64, float64), 
-  disguard, plot int, 
-  from, to, step float64) {
-  
-  var (
-    plot_fn = func() {
-      var (
-        r, x, y float64
-        i int
-      )
-      //xoff += 0.01
-      //yoff += 0.01
-      
-      for r = from; r < to; r += step {
-        y = rand.Float64()
-        x = rand.Float64()
-        //y = 0.1
-        for i = 0; i < disguard; i++ { x, y = fn(x, y, r) }
-        for i = 0; i < plot; i++ {
-          x, y = fn(x, y, r)
-          gl.Vertex2d(x, y)
-        }
-      }
-    }
-  )
-
-  plot_vertices(plot_fn)
-}
-
-
-func iterate_plot1d(fn func(float64, float64) (float64), 
-  disguard, plot int, 
-  from, to, step float64) {
-
-  var (
-    plot_fn = func() {
-      var (
-        x, y float64
-        i int
-      )
-      
-      //xoff += 0.01
-      //yoff += 0.01
-      for x = from; x < to; x += step {
-        y = rand.Float64()
-        //y = 0.1
-        for i = 0; i < disguard; i++ { y = fn(y, x) }
-        for i = 0; i < plot; i++ {
-          y = fn(y, x)
-          gl.Vertex2d(x-from,y)
-        }
-      }
-    }
-  )
-
-  plot_vertices(plot_fn)
+  gl.PointSize(1.0)
+  gl.LoadIdentity()
+/*
+  gl.Rotated(rot, 1.0, 0.0, 1.0)
+  gl.Rotated(rot, 1.0, 0.0, 1.0)
+*/
+  //rot += 0.2
+  gl.Translated(xoff, yoff, zoff)
+  gl.Scaled(scale, scale, scale)
+	gl.CallList(list)
+	gl.Flush()
 }
 
 func ncoeffs(order int) int { return (order + 1)*(order + 2) }
@@ -426,6 +384,8 @@ func testPlot() {
     coeffs []float64
     offsets, offset_coeffs []float64
     startx, starty float64
+
+		attractor = gl.GenLists(1);
   )
 
 	offsets = make([]float64, ncoeffs(order))
@@ -438,12 +398,18 @@ func testPlot() {
 
     if new_attractor { 
       coeffs, startx, starty = find_map_with_L(order, .1, 0.3) 
+			gl.NewList(attractor, gl.COMPILE);
+			generate_list(make_2D_plot_fn(
+				make_map_fn(order, offset_coeffs), 
+				startx, starty, 500, 1000000))
+			gl.EndList();
       new_attractor = false
     }
   
     //iterate_plot1d(itfn1d, 500, 100, 2, 4, 0.001)
     //plot2d(itfn2d, 500, 100, 2, 4, 0.001)
-    iterate_plot2d(make_map_fn(order, offset_coeffs), startx, starty, 500, 100000)
+		//plot_vertices(func() { gl.CallList(attractor) })
+		plot_list(attractor)
     //for i := range offsets { offsets[i] += 0.05 + 0.001 * rand.Float64() }
     offset_coeffs = coeffs
     //for i := range offsets { 
@@ -497,6 +463,7 @@ func initScreen() {
 // sdl.GetModState() doesn't work properly so we store state here :(
 var (
   mod = sdl.KMOD_NONE
+	xvel, yvel, zvel, svel float64 = 0,0,0,0
 )
 func handleEvents(new_attractor *bool) bool {
   for ev := sdl.PollEvent(); ev != nil; ev = sdl.PollEvent() {
@@ -509,6 +476,8 @@ func handleEvents(new_attractor *bool) bool {
       case sdl.KEYUP:
         switch sdl.Key(e.Keysym.Sym) {
         case sdl.K_LCTRL: mod = sdl.KMOD_NONE
+        case sdl.K_UP, sdl.K_DOWN:     yvel = 0
+        case sdl.K_LEFT, sdl.K_RIGHT:  xvel = 0; svel = 0
         }
       case sdl.KEYDOWN:
         switch mod {
@@ -516,17 +485,21 @@ func handleEvents(new_attractor *bool) bool {
           switch sdl.Key(e.Keysym.Sym) {
           case sdl.K_LCTRL:  mod = sdl.KMOD_LCTRL
           case sdl.K_ESCAPE: return false
-          case sdl.K_UP:        yoff += 0.05
-          case sdl.K_DOWN:      yoff -= 0.05
-          case sdl.K_LEFT:      xoff -= 0.05
-          case sdl.K_RIGHT:     xoff += 0.05
+          case sdl.K_UP:        yvel = -0.05
+          case sdl.K_DOWN:      yvel = 0.05
+          case sdl.K_LEFT:      xvel = 0.05
+          case sdl.K_RIGHT:     xvel = -0.05
           case sdl.K_n:         *new_attractor = true
-          default:
+					case sdl.K_r:         draw_reticule = !draw_reticule
+					case sdl.K_z:        
+						xoff, yoff, zoff = 0,0,0
+						scale = 0.5
+					default:
           }
         case sdl.KMOD_LCTRL:
           switch sdl.Key(e.Keysym.Sym) {
-          case sdl.K_LEFT:  scale -= 0.05
-          case sdl.K_RIGHT: scale += 0.05
+          case sdl.K_LEFT:  svel -= 0.05
+          case sdl.K_RIGHT: svel += 0.05
           default:
           }
         }
@@ -534,6 +507,10 @@ func handleEvents(new_attractor *bool) bool {
     default:
     }
   }
+	xoff += xvel
+	yoff += yvel
+	zoff += zvel
+	scale += svel
   return true
 }
 
