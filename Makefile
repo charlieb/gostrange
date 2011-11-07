@@ -1,6 +1,6 @@
 include $(GOROOT)/src/Make.inc
 
-TARG=test
+TARG=strange
 GOFILES= main.go
 
 INCLUDES=-I../Go-SDL/sdl/_obj \

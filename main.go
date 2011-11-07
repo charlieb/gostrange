@@ -12,6 +12,7 @@ import (
 	"flag"
 	"os"
 	"log"
+	"strconv"
 )
 
 func feq(x float64, y float64, within int) bool {
@@ -344,7 +345,7 @@ func make_henon_fn() F2D {
   return make_map_fn(2, coeffs)
 }
 
-func testPlot() {
+func testPlot(order int) {
   var (
     iterations int64 = 0
     start = time.Nanoseconds()
@@ -353,7 +354,6 @@ func testPlot() {
 
     new_attractor bool = true
 
-		order int = 5
     coeffs []float64
     //offsets, offset_coeffs []float64
     startx, starty float64
@@ -460,8 +460,7 @@ func handleEvents(new_attractor *bool) bool {
           case sdl.K_LEFT:      xvel = 0.05 / scale
           case sdl.K_RIGHT:     xvel = -0.05 / scale
           case sdl.K_n:         *new_attractor = true
-					case sdl.K_r:         draw_reticule = !draw_reticule
-					case sdl.K_z:        
+						case sdl.K_z:        
 						xoff, yoff, zoff = 0,0,0
 						scale = 0.5
 					default:
@@ -486,7 +485,10 @@ func handleEvents(new_attractor *bool) bool {
 
 
 /************************/
-var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+var (
+	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+	orderflag = flag.String("order", "5", "Order of attractors to generate")
+)
 
 func main() {
 	
@@ -499,6 +501,18 @@ func main() {
     pprof.StartCPUProfile(f)
     defer pprof.StopCPUProfile()
   }
-  initScreen()
-  testPlot()
+
+	initScreen()
+  if *orderflag != "" {
+		var (
+			order int
+			err os.Error
+		)
+		order, err = strconv.Atoi(*orderflag)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			testPlot(order)
+		}
+	}
 }
