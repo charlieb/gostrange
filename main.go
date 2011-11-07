@@ -63,9 +63,11 @@ func lyapunov_exponent2d(fn F2D, startx, starty float64) float64 {
 
   //fmt.Println(x1, y1, " - ", x2, y2, x1 - x2, y1 - y2)
 
-  for its = 0; its < 1000; its++ {
+  for its = 0; its < 10000; its++ {
     if math.Fabs(x1) > 10000 || math.Fabs(y1) > 10000 ||
-      math.IsNaN(x1) || math.IsNaN(x2) {  
+			math.Fabs(x2) > 10000 || math.Fabs(y2) > 10000 ||
+      math.IsNaN(x1) || math.IsNaN(y1) ||
+			math.IsNaN(x1) || math.IsNaN(y2) {  
       return 0 
     }
     // Advance both orbits one iteration and calculate the new separation d1.
@@ -82,7 +84,7 @@ func lyapunov_exponent2d(fn F2D, startx, starty float64) float64 {
     d1 = math.Sqrt(math.Pow(x3 - x1, 2) + math.Pow(y3 - y1, 2))
 
     // Evaluate log |d1/d0| in any convenient base.
-    ltot += math.Log(math.Fabs(d1 / d0))
+    ltot += math.Log2(math.Fabs(d1 / d0))
 
     // Readjust one orbit so its separation is d0 in the same direction as d1.
     x2 = x1 + d0 * (x3 - x1) / d1
@@ -96,25 +98,7 @@ var (
   //rot float64 = 45.0
   xoff, yoff, zoff float64 = 0,0,0
   scale float64 = 0.5
-  draw_reticule bool = true
 )
-
-func plot_vertices(fn func()) {
-  gl.Enable(gl.BLEND)
-  gl.Enable(gl.POINT_SMOOTH)
-  gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-
-  gl.PointSize(1.0)
-  gl.LoadIdentity()
-/*
-  gl.Rotated(rot, 1.0, 0.0, 1.0)
-  gl.Rotated(rot, 1.0, 0.0, 1.0)
-*/
-  //rot += 0.2
-  gl.Translated(xoff, yoff, zoff)
-  gl.Scaled(scale, scale, scale)
-
-}
 
 func make_2D_plot_fn(fn F2D, startx, starty float64, disguard, plot int) func() {
 	return func() {
@@ -132,19 +116,8 @@ func make_2D_plot_fn(fn F2D, startx, starty float64, disguard, plot int) func() 
 
 func generate_list(fn func()) {
   gl.Begin(gl.POINTS)
-  
-  if draw_reticule {
-    gl.Color4d(1,0,0, 1.0)
-    gl.Vertex2d(0.1,0.1)
-    gl.Vertex2d(0.1,-0.1)
-    gl.Vertex2d(-0.1,-0.1)
-    gl.Vertex2d(-0.1,0.1)
-  }
-	
   gl.Color4d(1,1,1, 0.25)
-	
   fn()
-	
   gl.End()
 }
 
@@ -160,8 +133,8 @@ func plot_list(list uint) {
   gl.Rotated(rot, 1.0, 0.0, 1.0)
 */
   //rot += 0.2
-  gl.Translated(xoff, yoff, zoff)
   gl.Scaled(scale, scale, scale)
+  gl.Translated(xoff, yoff, zoff)
 	gl.CallList(list)
 	gl.Flush()
 }
@@ -382,36 +355,33 @@ func testPlot() {
 
 		order int = 5
     coeffs []float64
-    offsets, offset_coeffs []float64
+    //offsets, offset_coeffs []float64
     startx, starty float64
 
 		attractor = gl.GenLists(1);
   )
 
-	offsets = make([]float64, ncoeffs(order))
-	offset_coeffs = make([]float64, ncoeffs(order))
+	//offsets = make([]float64, ncoeffs(order))
+	//offset_coeffs = make([]float64, ncoeffs(order))
 	coeffs = make([]float64, ncoeffs(order))
 
-  for i := range offsets { offsets[i] += rand.Float64() }
+  //for i := range offsets { offsets[i] += rand.Float64() }
 
   for handleEvents(&new_attractor) {
 
     if new_attractor { 
-      coeffs, startx, starty = find_map_with_L(order, .1, 0.3) 
+      coeffs, startx, starty = find_map_with_L(order, 0.1, 0.4) 
 			gl.NewList(attractor, gl.COMPILE);
 			generate_list(make_2D_plot_fn(
-				make_map_fn(order, offset_coeffs), 
+				make_map_fn(order, coeffs), 
 				startx, starty, 500, 1000000))
 			gl.EndList();
       new_attractor = false
     }
   
-    //iterate_plot1d(itfn1d, 500, 100, 2, 4, 0.001)
-    //plot2d(itfn2d, 500, 100, 2, 4, 0.001)
-		//plot_vertices(func() { gl.CallList(attractor) })
 		plot_list(attractor)
     //for i := range offsets { offsets[i] += 0.05 + 0.001 * rand.Float64() }
-    offset_coeffs = coeffs
+    //offset_coeffs = coeffs
     //for i := range offsets { 
     //  offset_coeffs[i] = coeffs[i] + 0.05 * math.Sin(offsets[i]) 
     //}
@@ -485,10 +455,10 @@ func handleEvents(new_attractor *bool) bool {
           switch sdl.Key(e.Keysym.Sym) {
           case sdl.K_LCTRL:  mod = sdl.KMOD_LCTRL
           case sdl.K_ESCAPE: return false
-          case sdl.K_UP:        yvel = -0.05
-          case sdl.K_DOWN:      yvel = 0.05
-          case sdl.K_LEFT:      xvel = 0.05
-          case sdl.K_RIGHT:     xvel = -0.05
+          case sdl.K_UP:        yvel = -0.05 / scale
+          case sdl.K_DOWN:      yvel = 0.05 / scale
+          case sdl.K_LEFT:      xvel = 0.05 / scale
+          case sdl.K_RIGHT:     xvel = -0.05 / scale
           case sdl.K_n:         *new_attractor = true
 					case sdl.K_r:         draw_reticule = !draw_reticule
 					case sdl.K_z:        
