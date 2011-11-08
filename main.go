@@ -352,7 +352,8 @@ func testPlot(order int) {
     split int64 = start
     total int64
 
-    new_attractor bool = true
+    new_attractor, redraw bool = true, true
+		npoints int = 1e6
 
     coeffs []float64
     //offsets, offset_coeffs []float64
@@ -367,16 +368,22 @@ func testPlot(order int) {
 
   //for i := range offsets { offsets[i] += rand.Float64() }
 
-  for handleEvents(&new_attractor) {
+  for handleEvents(&new_attractor, &redraw, &npoints) {
 
     if new_attractor { 
-      coeffs, startx, starty = find_map_with_L(order, 0.1, 0.4) 
+      coeffs, startx, starty = find_map_with_L(order, 0.1, 0.4)
+			redraw = true
+      new_attractor = false
+		}
+		if redraw {
 			gl.NewList(attractor, gl.COMPILE);
 			generate_list(make_2D_plot_fn(
 				make_map_fn(order, coeffs), 
-				startx, starty, 500, 1000000))
+				startx, starty, 500, npoints))
 			gl.EndList();
-      new_attractor = false
+			redraw = false
+			
+			fmt.Println("Redraw", npoints, "points")
     }
   
 		plot_list(attractor)
@@ -435,7 +442,7 @@ var (
   mod = sdl.KMOD_NONE
 	xvel, yvel, zvel, svel float64 = 0,0,0,0
 )
-func handleEvents(new_attractor *bool) bool {
+func handleEvents(new_attractor, redraw *bool, npoints *int) bool {
   for ev := sdl.PollEvent(); ev != nil; ev = sdl.PollEvent() {
     switch e := ev.(type) {
     case *sdl.QuitEvent:
@@ -463,6 +470,12 @@ func handleEvents(new_attractor *bool) bool {
 						case sdl.K_z:        
 						xoff, yoff, zoff = 0,0,0
 						scale = 0.5
+					case sdl.K_COMMA:
+						*npoints -= 1e5
+						*redraw = true
+					case sdl.K_PERIOD:
+						*npoints += 1e5
+						*redraw = true
 					default:
           }
         case sdl.KMOD_LCTRL:

@@ -12,3 +12,5 @@ n : Find a new attractor
 arrow keys : Move display around
 Ctrl + left/right arrows : increase/decrease display scale 
 z : re-center and unzoom
+, (comma) : Redraw with 100K fewer points
+. (period): Redraw with 100K more points
