@@ -1,11 +1,10 @@
-Strange Attractors animated.
+Strange Attractors.
 
 Can produce some quite beautiful figures.
 
-Finds attractors in 2-space
-
-usage: strange -order N
+usage: strange -order N -dimension D
 Where N is the order of the attractor e.g. 2 for quadratic, 3 for cubic etc.
+      D is the dimension of the attractor
 
 Keys:
 n : Find a new attractor
@@ -14,3 +13,6 @@ Ctrl + left/right arrows : increase/decrease display scale
 z : re-center and unzoom
 , (comma) : Redraw with 100K fewer points
 . (period): Redraw with 100K more points
+Numpad 8, 2: Rotate in X
+Numpad 4, 6: Rotate in Y
+Numpad 7, 9: Rotate in Z

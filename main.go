@@ -13,7 +13,6 @@ import (
 	"os"
 	"log"
 	"strconv"
-	"sort"
 )
 
 func feq(x float64, y float64, within int) bool {
@@ -149,202 +148,90 @@ func plot_list(list uint) {
 	gl.Flush()
 }
 
-func ncoeffs(order, dimension int) int { return (order + 1)*(order + 2) }
-
-func multiply_out_terms(order int, x, y float64, mults []float64) {
-		
-	var coeff int = -1
-
-  for i := 0; i < ncoeffs(order, 2) / 2; i++ { mults[i] = 1 }
-	for i := 0; i <= order; i++ {
-		for j := 0; j <= order - i; j++ {
-			coeff++
-			//fmt.Print(coeff, ": ")
-			for xm := 0; xm < i; xm++ {
-				//fmt.Print("x")
-				mults[coeff] *= x
-			}
-			for ym := 0; ym < j; ym++ {
-				//fmt.Print("y")
-				mults[coeff] *= y
-			}
-			//fmt.Print("\n")
-		}
-	}    
-}
-
-func apply_quadric_coeffs(p []float64, coeffs []float64) ([]float64) {
-	var (	x, y float64 = p[0], p[1] )
-	p[0] = coeffs[0] + 
-		coeffs[1] * y + 
-		coeffs[2] * y * y +
-		coeffs[3] * x +
-		coeffs[4] * x * y + 
-		coeffs[5] * x * x
-	p[1] = coeffs[6] + 
-		coeffs[7] * y + 
-		coeffs[8] * y * y +
-		coeffs[9] * x +
-		coeffs[10] * x * y + 
-		coeffs[11] * x * x 
-	return p
-}
-
-
-func apply_cubic_coeffs(p []float64, coeffs []float64) ([]float64) {
-	var (	x, y float64 = p[0], p[1] )
-	p[0] = coeffs[0] + 
-		coeffs[1] * y + 
-		coeffs[2] * y * y +
-		coeffs[3] * y * y * y +
-		coeffs[4] * x +
-    coeffs[5] * x * y + 
-    coeffs[6] * x * y * y + 
-    coeffs[7] * x * x +
-    coeffs[8] * x * x * y +
-    coeffs[9] * x * x * x
-	p[1] = coeffs[10] + 
-		coeffs[11] * y + 
-		coeffs[12] * y * y +
-		coeffs[13] * y * y * y +
-		coeffs[14] * x +
-    coeffs[15] * x * y + 
-    coeffs[16] * x * y * y + 
-    coeffs[17] * x * x +
-    coeffs[18] * x * x * y +
-    coeffs[19] * x * x * x
-	return p
-}
-
-func apply_quartic_coeffs(p []float64, coeffs []float64) ([]float64) {
-	var (	x, y float64 = p[0], p[1] )
-	p[0] = coeffs[0] + 
-		coeffs[1] * y + 
-		coeffs[2] * y * y +
-		coeffs[3] * y * y * y +
-		coeffs[4] * y * y * y + y +
-		coeffs[5] * x +
-    coeffs[6] * x * y + 
-    coeffs[7] * x * y * y + 
-    coeffs[8] * x * y * y * y + 
-    coeffs[9] * x * x +
-    coeffs[10] * x * x * y +
-    coeffs[11] * x * x * y * y +
-    coeffs[12] * x * x * x + 
-    coeffs[13] * x * x * x * y +
-    coeffs[14] * x * x * x * x
-	p[1] = coeffs[15] + 
-		coeffs[16] * y + 
-		coeffs[17] * y * y +
-		coeffs[18] * y * y * y +
-		coeffs[19] * y * y * y + y +
-		coeffs[20] * x +
-    coeffs[21] * x * y + 
-    coeffs[22] * x * y * y + 
-    coeffs[23] * x * y * y * y + 
-    coeffs[24] * x * x +
-    coeffs[25] * x * x * y +
-    coeffs[26] * x * x * y * y +
-    coeffs[27] * x * x * x + 
-    coeffs[28] * x * x * x * y +
-    coeffs[29] * x * x * x * x
-	return p
-}
-
-func apply_quintic_coeffs(p []float64, coeffs []float64) ([]float64) {
-	var (	x, y float64 = p[0], p[1] )
-	p[0] = coeffs[0] + 
-		coeffs[1] * y + 
-		coeffs[2] * y * y +
-		coeffs[3] * y * y * y +
-		coeffs[4] * y * y * y + y +
-		coeffs[5] * y * y * y + y * y +
-		coeffs[6] * x +
-    coeffs[7] * x * y + 
-    coeffs[8] * x * y * y + 
-    coeffs[9] * x * y * y * y + 
-    coeffs[10] * x * y * y * y * y + 
-    coeffs[11] * x * x +
-    coeffs[12] * x * x * y +
-    coeffs[13] * x * x * y * y +
-    coeffs[14] * x * x * y * y * y +
-    coeffs[15] * x * x * x + 
-    coeffs[16] * x * x * x * y +
-    coeffs[17] * x * x * x * y * y +
-    coeffs[18] * x * x * x * x +
-    coeffs[19] * x * x * x * x * y +
-    coeffs[20] * x * x * x * x * x
-	p[1] = coeffs[21] + 
-		coeffs[22] * y + 
-		coeffs[23] * y * y +
-		coeffs[24] * y * y * y +
-		coeffs[25] * y * y * y + y +
-		coeffs[26] * y * y * y + y * y +
-		coeffs[27] * x +
-    coeffs[28] * x * y + 
-    coeffs[29] * x * y * y + 
-    coeffs[30] * x * y * y * y + 
-    coeffs[31] * x * y * y * y * y + 
-    coeffs[32] * x * x +
-    coeffs[33] * x * x * y +
-    coeffs[34] * x * x * y * y +
-    coeffs[35] * x * x * y * y * y +
-    coeffs[36] * x * x * x + 
-    coeffs[37] * x * x * x * y +
-    coeffs[38] * x * x * x * y * y +
-    coeffs[39] * x * x * x * x +
-    coeffs[40] * x * x * x * x * y +
-    coeffs[41] * x * x * x * x * x 
-	return p
-}
-
-func make_map_fn(order, dimension int, coeffs []float64) F {
-
-	switch dimension {
-	case 2:
-		switch order {
-		case 2:	return func(p []float64) []float64 {
-				return apply_quadric_coeffs(p, coeffs) 
-			}
-		case 3:	return func(p []float64) []float64 {
-				return apply_cubic_coeffs(p, coeffs) 
-			}
-		case 4:	return func(p []float64) []float64 {
-				return apply_quartic_coeffs(p, coeffs) 
-			}
-		case 5:	return func(p []float64) []float64 {
-				return apply_quintic_coeffs(p, coeffs) 
-			}
-		}
-		//case 3
+func nCoeffs(dimension, order int) int {
+	switch {
+	case dimension == 0 || order == 0: return 0
+	case dimension == 1: return order
+	case order == 1: return dimension
+	default: return 2 * nCoeffs(dimension - 1, order) -
+			nCoeffs(dimension - 2, order) +
+			nCoeffs(dimension, order - 1) - 
+			nCoeffs(dimension - 1, order - 1)
 	}
+	return 0
+}
 
-	var	(
-		nterms = ncoeffs(order, dimension) / dimension
-		term_mults []float64 = make([]float64, nterms)
+func coeffCombinations(dimension, order int) [][]int {
+	var (
+		vals []int = make([]int, order)	
+		vals_lt_dimension bool = true
+		results [][]int = make([][]int, 0)
+		add_result func([]int) = func(new_result []int) {
+			new_copy := make([]int, order)
+			copy(new_copy, new_result)
+			results = append(results, new_copy)
+		}
 	)
-	
-	return func(p []float64) []float64 {
-		var (
-			xnext float64 = 0
-			ynext float64 = 0
-		)
-		multiply_out_terms(order, p[0], p[1], term_mults)
-		for i := 0; i < nterms; i++ {
-			xnext += term_mults[i] * coeffs[i]
-			ynext += term_mults[i] * coeffs[i + nterms]
+	for vals_lt_dimension {
+		vals_lt_dimension = false
+		for i := 0; i < order; i++ {
+			if vals[i] < dimension {
+				vals[i]++
+				vals_lt_dimension = true
+				add_result(vals)
+				break
+			} else {
+				for j := i + 1; j < order; j++ {
+					if vals[j] < dimension {
+						vals[j]++
+						for k := i; k < j; k++ {
+							vals[k] = vals[j]
+						}
+						add_result(vals)
+						i = -1
+						break
+					}
+				}
+			}
 		}
-		p[0], p[1] = xnext, ynext
-		return p
+	}
+	return results
+}
+
+func makeMapFn(dimension, order int, coeffs []float64) F {
+	var (
+		coeffCombs [][]int = coeffCombinations(dimension, order)
+		nCoeffCombs int = nCoeffs(dimension, order)
+	)
+	return func(p []float64) []float64 {
+		var ( 
+			product float64
+			coeff int = 0
+			next = make([]float64, int(math.Fmax(3, float64(dimension))))
+		)
+		for d := 0; d < dimension; d++ {
+			next[d] = coeffs[coeff]; coeff++
+			for c := 0; c < nCoeffCombs; c++ {
+				product = coeffs[coeff]; coeff++
+				for ord := 0; ord < order; ord++ {
+					if coeffCombs[c][ord] > 0 {
+						product *= p[coeffCombs[c][ord] - 1]
+					}
+				}
+				next[d] += product
+			}
+		}
+		return next
 	}
 }
 
-func find_map_with_L(order, dimension int, min, max float64) (coeffs []float64, start []float64) {
+
+func find_map_with_L(dimension, order int, min, max float64) (coeffs []float64, start []float64) {
   var (
     L float64 = 0
     rejected int = -1
 	)
-	coeffs = make([]float64, ncoeffs(order, dimension))
+	coeffs = make([]float64, dimension + nCoeffs(order, dimension) * dimension)
 	start = make([]float64, int(math.Fmax(3, float64(dimension))))
 	for i := 0; i < dimension; i++ { start[i] = rand.Float64() }
 
@@ -353,7 +240,7 @@ func find_map_with_L(order, dimension int, min, max float64) (coeffs []float64, 
     for i := range coeffs {
       coeffs[i] = 1.2 - 2.4 * rand.Float64()
     }
-    L = lyapunov_exponent(make_map_fn(order, dimension, coeffs), start)
+    L = lyapunov_exponent(makeMapFn(dimension, order, coeffs), start)
   }
   fmt.Println("Rejected:", rejected)
   fmt.Println("L:", L)
@@ -365,10 +252,10 @@ func find_map_with_L(order, dimension int, min, max float64) (coeffs []float64, 
 func make_henon_fn() F {
   //  a1 = 1 a3 = -1.4 a5 = 0.3 a8 = 1 
   coeffs := []float64{1, 0, -1.4, 0, 0.3, 0, 0, 1, 0,0,0,0}
-  return make_map_fn(2, 2, coeffs)
+  return makeMapFn(2, 2, coeffs)
 }
 
-func testPlot(order, dimension int) {
+func testPlot(dimension, order int) {
   var (
     iterations int64 = 0
     start_t = time.Nanoseconds()
@@ -387,21 +274,21 @@ func testPlot(order, dimension int) {
 
 	//offsets = make([]float64, ncoeffs(order))
 	//offset_coeffs = make([]float64, ncoeffs(order))
-	coeffs = make([]float64, ncoeffs(order, 2))
+	//coeffs = make([]float64, dimension + nCoeffs(order, dimension) * dimension)
 
   //for i := range offsets { offsets[i] += rand.Float64() }
 
   for handleEvents(&new_attractor, &redraw, &npoints) {
 
     if new_attractor { 
-      coeffs, start = find_map_with_L(order, dimension, 0.1, 0.4)
+      coeffs, start = find_map_with_L(dimension, order, 0.1, 0.4)
 			redraw = true
       new_attractor = false
 		}
 		if redraw {
 			gl.NewList(attractor, gl.COMPILE);
 			generate_list(
-				make_plot_fn(make_map_fn(order, dimension, coeffs), start, 500, npoints))
+				make_plot_fn(makeMapFn(dimension, order, coeffs), start, 500, npoints))
 			gl.EndList();
 			redraw = false
 			
@@ -415,7 +302,7 @@ func testPlot(order, dimension int) {
     //  offset_coeffs[i] = coeffs[i] + 0.05 * math.Sin(offsets[i]) 
     //}
     sdl.GL_SwapBuffers()
-    gl.Clear(gl.COLOR_BUFFER_BIT)
+    gl.Clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT)
 
     
     iterations++
@@ -454,6 +341,7 @@ func initScreen() {
   gl.Viewport(0, 0, int(screen.W), int(screen.H))
   gl.LoadIdentity()
   gl.Ortho(0, float64(screen.W), float64(screen.H), 0, -1.0, 1.0)
+	//gl.DepthRange(-1, 1)
 
   gl.ClearColor(0, 0, 0, 0)
   gl.Clear(gl.COLOR_BUFFER_BIT)
@@ -499,7 +387,7 @@ func handleEvents(new_attractor, redraw *bool, npoints *int) bool {
           case sdl.K_KP9:       zrotvel = +0.5
           case sdl.K_n:         *new_attractor = true
 						case sdl.K_z:        
-						xoff, yoff, zoff = 0,0,0
+						xoff, yoff, zoff, xrot, yrot, zrot = 0,0,0,0,0,0
 						scale = 0.5
 					case sdl.K_COMMA:
 						*npoints -= 1e5
@@ -530,71 +418,6 @@ func handleEvents(new_attractor, redraw *bool, npoints *int) bool {
   return true
 }
 
-
-/************************/
-
-type sliceSliceInt [][]int
-func (ssi sliceSliceInt) Len() int { return len(ssi) }
-// Less returns whether the element with index i should sort
-// before the element with index j.
-func (ssi sliceSliceInt) Less(i, j int) bool {
-	for x := range ssi[i] {
-		if ssi[i][x] != ssi[j][x] { return ssi[i][x] < ssi[j][x] }
-	}
-	return true
-}
-// Swap swaps the elements with indexes i and j.
-func (ssi sliceSliceInt) Swap(i, j int) {
-	tmp := ssi[i]
-	ssi[i] = ssi[j]
-	ssi[j] = tmp
-}
-
-func allCombinations(dimension, order int) [][]int {
-	var (
-		result [][]int = make([][]int, 0)
-		fn func(int, int, []int) 
-		pref = make([]int, 0)
-	)
-
-	fn = func(dimension, order int, prefix []int) {
-		if order == 0 { 
-			result = append(result, make([]int, len(prefix)))
-			copy(result[len(result) - 1], prefix)
-			sort.IntSlice(result[len(result) - 1]).Sort()
-			return 
-		}
-		for d := 0; d <= dimension; d++ { 
-			fn(dimension, order - 1, append(prefix, d))
-		} 
-	}
-	
-	fn(dimension, order, pref)
-	return result
-}
-
-func uniqueCombinations(dimension, order int) [][]int {
-	var (
-		result [][]int = allCombinations(dimension, order)
-		last, end int = 0, len(result)
-	)
-	sort.Sort(sliceSliceInt(result))
-
-	for i := 1; i < end; i++ {
-		for elem := range result[i] {
-			if result[i][elem] != result[last][elem] {
-				copy(result[last+1:], result[i:])
-				end -= i - last - 1
-				result = result[:end]
-				last += 1
-				i = last
-				break
-			}
-		}
-	}
-		
-	return result[:end]
-}
 
 /************************/
 var (
@@ -637,5 +460,5 @@ func main() {
 		}
 	}
 
-	testPlot(order, dimension)
+	testPlot(dimension, order)
 }
