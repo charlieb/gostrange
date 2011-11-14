@@ -1,7 +1,7 @@
 include $(GOROOT)/src/Make.inc
 
 TARG=strange
-GOFILES= main.go
+GOFILES= main.go matrix.go
 
 INCLUDES=-I../Go-SDL/sdl/_obj \
 				 -I../Go-SDL/mixer/_obj \

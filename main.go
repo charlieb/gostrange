@@ -32,21 +32,21 @@ func flteq(x float64, y float64, within int) bool {
   return feq(x, y, within) || x < y
 }
 
-type F func([]float64) []float64
+type F func(Matrix) Matrix
 
-func lyapunov_exponent(fn F, start []float64) float64 {
+func lyapunov_exponent(fn F, start Matrix) float64 {
   const (
     ignore int = 500
   )
   var (
-    p1 []float64 = make([]float64, len(start))
-		p2 []float64 = make([]float64, len(start))
-		p3 []float64 = make([]float64, len(start))
+    p1 Matrix = Vector(len(start))
+		p2 Matrix = Vector(len(start))
+		p3 Matrix = Vector(len(start))
 		d0, d1, ltot, dim_sum float64
     i, its, dim int
   )
   // Start with any initial condition in the basin of attraction.
-  copy(p1, start)
+	for i = 0; i < len(start); i++ { p1[i][0] = start[i][0] }
 
   // Iterate until the orbit is on the attractor.
   for i = 0; i < ignore; i++ { p1 = fn(p1) }
@@ -54,22 +54,22 @@ func lyapunov_exponent(fn F, start []float64) float64 {
   // Select (almost any) nearby point (separated by d0).
   // it's about 1000 MIN_FLOATs away from d
   // sqrt 1000 = 31
-  copy(p2 ,p1)
+	for i = 0; i < len(start); i++ { p2[i][0] = p1[i][0] }
   for i = 0; i < 31; i++ {
 		for dim = 0; dim < len(p2); dim++ {
-			p2[dim] = math.Nextafter(p2[dim], 1000)
+			p2[dim][0] = math.Nextafter(p2[dim][0], 1000)
 		}
   }
 
   // Get a d0 of the right scale
-  d0 = p1[0] - p2[0]
+  d0 = p1[0][0] - p2[0][0]
 
   //fmt.Println(x1, y1, " - ", x2, y2, x1 - x2, y1 - y2)
 
   for its = 0; its < 10000; its++ {
 		for dim = 0; dim < len(p2); dim++ {
-			if math.Fabs(p1[dim]) > 10000 || math.Fabs(p2[dim]) > 10000 ||
-				math.IsNaN(p1[dim]) || math.IsNaN(p2[dim]) {
+			if math.Fabs(p1[dim][0]) > 10000 || math.Fabs(p2[dim][0]) > 10000 ||
+				math.IsNaN(p1[dim][0]) || math.IsNaN(p2[dim][0]) {
 				return 0 
 			}
 		}
@@ -81,12 +81,12 @@ func lyapunov_exponent(fn F, start []float64) float64 {
     p3 = fn(p2)
 
 		for dim = 0; dim < len(p2); dim++ {
-			if feq(p1[dim], p3[dim], 2) { continue }
+			if feq(p1[dim][0], p3[dim][0], 2) { continue }
 		}
 
 		dim_sum = 0
 		for dim = 0; dim < len(p2); dim++ {
-			dim_sum += math.Pow(p3[dim] - p1[dim], 2)
+			dim_sum += math.Pow(p3[dim][0] - p1[dim][0], 2)
 		}
     d1 = math.Sqrt(dim_sum)
 
@@ -95,9 +95,9 @@ func lyapunov_exponent(fn F, start []float64) float64 {
 
     // Readjust one orbit so its separation is d0 in the same direction as d1.
 		for dim = 0; dim < len(p2); dim++ {
-			p2[dim] = p1[dim] + d0 * (p3[dim] - p1[dim]) / d1
+			p2[dim][0] = p1[dim][0] + d0 * (p3[dim][0] - p1[dim][0]) / d1
 		}
-  }
+	}
   // Repeat many times and calculate the average 
   return ltot / float64(its)
 }
@@ -109,10 +109,10 @@ var (
   scale float64 = 0.5
 )
 
-func make_plot_fn(fn F, start []float64, disguard, plot int) func() {
+func make_plot_fn(fn F, start Matrix, disguard, plot int) func() {
 	return func() {
     var (
-      p []float64 = make([]float64, len(start))
+      p Matrix = Vector(len(start))
       i int
     )
 		copy(p, start)
@@ -120,7 +120,7 @@ func make_plot_fn(fn F, start []float64, disguard, plot int) func() {
     for i = 0; i < disguard; i++ { p = fn(p) }
     for i = 0; i < plot; i++ {
       p = fn(p)
-      gl.Vertex3d(p[0], p[1], p[2])
+      gl.Vertex3d(p[0][0], p[1][0], p[2][0])
     }
   }
 }
@@ -203,22 +203,22 @@ func makeMapFn(dimension, order int, coeffs []float64) F {
 		coeffCombs [][]int = coeffCombinations(dimension, order)
 		nCoeffCombs int = nCoeffs(dimension, order)
 	)
-	return func(p []float64) []float64 {
+	return func(p Matrix) Matrix {
 		var ( 
 			product float64
 			coeff int = 0
-			next = make([]float64, int(math.Fmax(3, float64(dimension))))
+			next Matrix = Vector(int(math.Fmax(3, float64(dimension))))
 		)
 		for d := 0; d < dimension; d++ {
-			next[d] = coeffs[coeff]; coeff++
+			next[d][0] = coeffs[coeff]; coeff++
 			for c := 0; c < nCoeffCombs; c++ {
 				product = coeffs[coeff]; coeff++
 				for ord := 0; ord < order; ord++ {
 					if coeffCombs[c][ord] > 0 {
-						product *= p[coeffCombs[c][ord] - 1]
+						product *= p[coeffCombs[c][ord] - 1][0]
 					}
 				}
-				next[d] += product
+				next[d][0] += product
 			}
 		}
 		return next
@@ -226,14 +226,14 @@ func makeMapFn(dimension, order int, coeffs []float64) F {
 }
 
 
-func find_map_with_L(dimension, order int, min, max float64) (coeffs []float64, start []float64) {
+func find_map_with_L(dimension, order int, min, max float64) (coeffs []float64, start Matrix) {
   var (
     L float64 = 0
     rejected int = -1
 	)
 	coeffs = make([]float64, dimension + nCoeffs(order, dimension) * dimension)
-	start = make([]float64, int(math.Fmax(3, float64(dimension))))
-	for i := 0; i < dimension; i++ { start[i] = rand.Float64() }
+	start = Vector(int(math.Fmax(3, float64(dimension))))
+	for i := 0; i < dimension; i++ { start[i][0] = rand.Float64() }
 
   for L < min || L > max {
     rejected++
@@ -249,12 +249,6 @@ func find_map_with_L(dimension, order int, min, max float64) (coeffs []float64, 
   return
 }
 
-func make_henon_fn() F {
-  //  a1 = 1 a3 = -1.4 a5 = 0.3 a8 = 1 
-  coeffs := []float64{1, 0, -1.4, 0, 0.3, 0, 0, 1, 0,0,0,0}
-  return makeMapFn(2, 2, coeffs)
-}
-
 func testPlot(dimension, order int) {
   var (
     iterations int64 = 0
@@ -267,7 +261,7 @@ func testPlot(dimension, order int) {
 
     coeffs []float64
     //offsets, offset_coeffs []float64
-		start []float64 = make([]float64, int(math.Fmax(3, float64(dimension))))
+		start Matrix = Vector(int(math.Fmax(3, float64(dimension))))
 
 		attractor = gl.GenLists(1);
   )
@@ -337,7 +331,8 @@ func initScreen() {
   }
 
   gl.MatrixMode(gl.PROJECTION)
-
+	//gl.MatrixMode(gl.MODELVIEW)
+	
   gl.Viewport(0, 0, int(screen.W), int(screen.H))
   gl.LoadIdentity()
   gl.Ortho(0, float64(screen.W), float64(screen.H), 0, -1.0, 1.0)
