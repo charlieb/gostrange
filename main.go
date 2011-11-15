@@ -39,14 +39,14 @@ func lyapunov_exponent(fn F, start Matrix) float64 {
     ignore int = 500
   )
   var (
-    p1 Matrix = Vector(len(start))
-		p2 Matrix = Vector(len(start))
-		p3 Matrix = Vector(len(start))
+    p1 Matrix = Vector(len(start[0]))
+		p2 Matrix = Vector(len(start[0]))
+		p3 Matrix = Vector(len(start[0]))
 		d0, d1, ltot, dim_sum float64
     i, its, dim int
   )
   // Start with any initial condition in the basin of attraction.
-	for i = 0; i < len(start); i++ { p1[i][0] = start[i][0] }
+	copy(p1[0], start[0])
 
   // Iterate until the orbit is on the attractor.
   for i = 0; i < ignore; i++ { p1 = fn(p1) }
@@ -54,10 +54,10 @@ func lyapunov_exponent(fn F, start Matrix) float64 {
   // Select (almost any) nearby point (separated by d0).
   // it's about 1000 MIN_FLOATs away from d
   // sqrt 1000 = 31
-	for i = 0; i < len(start); i++ { p2[i][0] = p1[i][0] }
+	copy(p2[0], p1[0])
   for i = 0; i < 31; i++ {
-		for dim = 0; dim < len(p2); dim++ {
-			p2[dim][0] = math.Nextafter(p2[dim][0], 1000)
+		for dim = 0; dim < len(p2[0]); dim++ {
+			p2[0][dim] = math.Nextafter(p2[0][dim], 1000)
 		}
   }
 
@@ -68,8 +68,8 @@ func lyapunov_exponent(fn F, start Matrix) float64 {
 
   for its = 0; its < 10000; its++ {
 		for dim = 0; dim < len(p2); dim++ {
-			if math.Fabs(p1[dim][0]) > 10000 || math.Fabs(p2[dim][0]) > 10000 ||
-				math.IsNaN(p1[dim][0]) || math.IsNaN(p2[dim][0]) {
+			if math.Fabs(p1[0][dim]) > 10000 || math.Fabs(p2[0][dim]) > 10000 ||
+				math.IsNaN(p1[0][dim]) || math.IsNaN(p2[0][dim]) {
 				return 0 
 			}
 		}
@@ -80,13 +80,13 @@ func lyapunov_exponent(fn F, start Matrix) float64 {
     p1 = fn(p1)
     p3 = fn(p2)
 
-		for dim = 0; dim < len(p2); dim++ {
-			if feq(p1[dim][0], p3[dim][0], 2) { continue }
+		for dim = 0; dim < len(p2[0]); dim++ {
+			if feq(p1[0][dim], p3[0][dim], 2) { continue }
 		}
 
 		dim_sum = 0
-		for dim = 0; dim < len(p2); dim++ {
-			dim_sum += math.Pow(p3[dim][0] - p1[dim][0], 2)
+		for dim = 0; dim < len(p2[0]); dim++ {
+			dim_sum += math.Pow(p3[0][dim] - p1[0][dim], 2)
 		}
     d1 = math.Sqrt(dim_sum)
 
@@ -94,8 +94,8 @@ func lyapunov_exponent(fn F, start Matrix) float64 {
     ltot += math.Log2(math.Fabs(d1 / d0))
 
     // Readjust one orbit so its separation is d0 in the same direction as d1.
-		for dim = 0; dim < len(p2); dim++ {
-			p2[dim][0] = p1[dim][0] + d0 * (p3[dim][0] - p1[dim][0]) / d1
+		for dim = 0; dim < len(p2[0]); dim++ {
+			p2[0][dim] = p1[0][dim] + d0 * (p3[0][dim] - p1[0][dim]) / d1
 		}
 	}
   // Repeat many times and calculate the average 
@@ -115,8 +115,7 @@ func make_plot_fn(fn F, start Matrix, disguard, plot int) func() {
       p Matrix = Vector(len(start))
       i int
     )
-		copy(p, start)
-
+		for i = 0; i < len(start); i++ { p[i][0] = start[i][0] }
     for i = 0; i < disguard; i++ { p = fn(p) }
     for i = 0; i < plot; i++ {
       p = fn(p)
@@ -210,15 +209,15 @@ func makeMapFn(dimension, order int, coeffs []float64) F {
 			next Matrix = Vector(int(math.Fmax(3, float64(dimension))))
 		)
 		for d := 0; d < dimension; d++ {
-			next[d][0] = coeffs[coeff]; coeff++
+			next[0][d] = coeffs[coeff]; coeff++
 			for c := 0; c < nCoeffCombs; c++ {
 				product = coeffs[coeff]; coeff++
 				for ord := 0; ord < order; ord++ {
 					if coeffCombs[c][ord] > 0 {
-						product *= p[coeffCombs[c][ord] - 1][0]
+						product *= p[0][coeffCombs[c][ord] - 1]
 					}
 				}
-				next[d][0] += product
+				next[0][d] += product
 			}
 		}
 		return next
@@ -233,7 +232,7 @@ func find_map_with_L(dimension, order int, min, max float64) (coeffs []float64, 
 	)
 	coeffs = make([]float64, dimension + nCoeffs(order, dimension) * dimension)
 	start = Vector(int(math.Fmax(3, float64(dimension))))
-	for i := 0; i < dimension; i++ { start[i][0] = rand.Float64() }
+	for i := 0; i < dimension; i++ { start[0][i] = rand.Float64() }
 
   for L < min || L > max {
     rejected++
@@ -249,6 +248,21 @@ func find_map_with_L(dimension, order int, min, max float64) (coeffs []float64, 
   return
 }
 
+func MakePointMatrix(fn F, start Matrix, disguard, plot int) Matrix {
+	var (
+		res Matrix = MakeMatrix(plot, len(start[0]))
+		p Matrix = Vector(len(start[0]))
+		i int
+	)
+	copy(p[0], start[0])
+  for i = 0; i < disguard; i++ { p = fn(p) }
+  for i = 0; i < plot; i++ {
+    p = fn(p)
+		copy(res[i], p[0])
+  }
+	return res
+}
+
 func testPlot(dimension, order int) {
   var (
     iterations int64 = 0
@@ -262,6 +276,7 @@ func testPlot(dimension, order int) {
     coeffs []float64
     //offsets, offset_coeffs []float64
 		start Matrix = Vector(int(math.Fmax(3, float64(dimension))))
+		points Matrix
 
 		attractor = gl.GenLists(1);
   )
@@ -280,9 +295,14 @@ func testPlot(dimension, order int) {
       new_attractor = false
 		}
 		if redraw {
+			points = MakePointMatrix(makeMapFn(dimension, order, coeffs), start, 500, npoints)
 			gl.NewList(attractor, gl.COMPILE);
-			generate_list(
-				make_plot_fn(makeMapFn(dimension, order, coeffs), start, 500, npoints))
+			gl.Begin(gl.POINTS)
+			gl.Color4d(1,1,1, 0.25)
+			for i := 0; i < len(points); i++ { 
+				gl.Vertex3d(points[i][0], points[i][1], points[i][2])
+			}
+			gl.End()
 			gl.EndList();
 			redraw = false
 			
