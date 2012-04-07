@@ -1,12 +1,12 @@
 package main
 
 import (
-	"sdl"
+	"github.com/banthar/Go-SDL/sdl"
   "fmt"
-  "rand"
+  "math/rand"
   "math"
   "time"
-  "gl"
+  "github.com/banthar/gl"
 
 	"runtime/pprof"
 	"flag"
@@ -69,8 +69,8 @@ func lyapunov_exponent(fn F, start Matrix) float64 {
 
   for its = 0; its < 10000; its++ {
 		for dim = 0; dim < p2.Height(); dim++ {
-			if math.Fabs(p1.Cols()[0][dim]) > 10000 || 
-				math.Fabs(p2.Cols()[0][dim]) > 10000 ||
+			if math.Abs(p1.Cols()[0][dim]) > 10000 || 
+				math.Abs(p2.Cols()[0][dim]) > 10000 ||
 				math.IsNaN(p1.Cols()[0][dim]) || 
 				math.IsNaN(p2.Cols()[0][dim]) {
 				return 0 
@@ -94,7 +94,7 @@ func lyapunov_exponent(fn F, start Matrix) float64 {
     d1 = math.Sqrt(dim_sum)
 
     // Evaluate log |d1/d0| in any convenient base.
-    ltot += math.Log2(math.Fabs(d1 / d0))
+    ltot += math.Log2(math.Abs(d1 / d0))
 
     // Readjust one orbit so its separation is d0 in the same direction as d1.
 		for dim = 0; dim < p2.Height(); dim++ {
@@ -210,7 +210,7 @@ func makeMapFn(dimension, order int, coeffs []float64) F {
 		var ( 
 			product float64
 			coeff int = 0
-			next Matrix = MakeMatrix(1, int(math.Fmax(3, float64(dimension))))
+			next Matrix = MakeMatrix(1, int(math.Max(3, float64(dimension))))
 		)
 		for d := 0; d < dimension; d++ {
 			next.Cols()[0][d] = coeffs[coeff]; coeff++
@@ -235,7 +235,7 @@ func find_map_with_L(dimension, order int, min, max float64) (coeffs []float64, 
     rejected int = -1
 	)
 	coeffs = make([]float64, dimension + nCoeffs(order, dimension) * dimension)
-	start = MakeMatrix(1, int(math.Fmax(3, float64(dimension))))
+	start = MakeMatrix(1, int(math.Max(3, float64(dimension))))
 	for i := 0; i < dimension; i++ { start.Cols()[0][i] = rand.Float64() }
 
   for L < min || L > max {
@@ -274,16 +274,16 @@ var (
 func testPlot(dimension, order int) {
   var (
     iterations int64 = 0
-    start_t = time.Nanoseconds()
-    split int64 = start_t
-    total int64
+    start_t = time.Now()
+    split time.Time = start_t
+    total time.Duration
 
     new_attractor, redraw bool = true, true
 		npoints int = 1e5
 
     coeffs []float64
     //offsets, offset_coeffs []float64
-		start Matrix = MakeMatrix(1, int(math.Fmax(3, float64(dimension))))
+		start Matrix = MakeMatrix(1, int(math.Max(3, float64(dimension))))
 		points, points2 /*, points3*/ Matrix
 
 		//attractor = gl.GenLists(1);
@@ -297,7 +297,7 @@ func testPlot(dimension, order int) {
 
   for handleEvents(&new_attractor, &redraw, &npoints) {
 
-    if new_attractor { 
+    if new_attractor {
       coeffs, start = find_map_with_L(dimension, order, 0.1, 0.4)
 			redraw = true
       new_attractor = false
@@ -307,7 +307,6 @@ func testPlot(dimension, order int) {
 			points2 = MakeMatrix(npoints, points.Height())
 			//points3 = MakeMatrix(npoints, points.Height())
 			redraw = false
-			
 			fmt.Println("Redraw", npoints, "points")
     }
 
@@ -327,7 +326,7 @@ func testPlot(dimension, order int) {
 		gl.Enable(gl.BLEND)
 		gl.Enable(gl.POINT_SMOOTH)
 		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-		
+
 		gl.PointSize(1.0)
 		gl.LoadIdentity()
 		gl.Rotated(xrot, 1,0,0)
@@ -346,16 +345,16 @@ func testPlot(dimension, order int) {
 		}
 		gl.DrawArrays(gl.POINTS, 0, points2.Width())
 		gl.DisableClientState(gl.VERTEX_ARRAY)
-		
+
     sdl.GL_SwapBuffers()
     gl.Clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT)
-    
+
     iterations++
-    if time.Nanoseconds() - split > 10e9 {
-      total = time.Nanoseconds() - start_t
-      fmt.Println(iterations, "iterations in", total / 1e9, "gives", 
-        iterations * 1e9 / total, "fps")
-      split = time.Nanoseconds()
+    if time.Since(split).Seconds() > 1.0 {
+      total = time.Since(start_t)
+      fmt.Println(iterations, "iterations in", total.Seconds(), "gives",
+        iterations * 1e9 / total.Nanoseconds(), "fps")
+      split = time.Now()
     }
   }
 }
@@ -383,7 +382,7 @@ func initScreen() {
 
   gl.MatrixMode(gl.PROJECTION)
 	//gl.MatrixMode(gl.MODELVIEW)
-	
+
   gl.Viewport(0, 0, int(screen.W), int(screen.H))
   gl.LoadIdentity()
   gl.Ortho(0, float64(screen.W), float64(screen.H), 0, -1.0, 1.0)
@@ -476,7 +475,7 @@ func main() {
 
 	var (
 		order, dimension int
-		err os.Error
+		err error
 	)
 
   flag.Parse()
